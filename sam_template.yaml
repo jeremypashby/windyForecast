@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS Lambda function for Windy API integration
+
+Resources:
+  WindyLambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SecretsManagerReadOnlyPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:WindyAPIKey-*
+
+  WindyLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties: 
+      Handler: windyAPI.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      MemorySize: 128
+      Role: !GetAtt WindyLambdaFunctionRole.Arn
+      Environment:
+        Variables:
+          REGION_NAME: !Ref AWS::Region
+      Events:
+        ApiGateway:
+          Type: Api
+          Properties:
+            Path: /forecast
+            Method: get
